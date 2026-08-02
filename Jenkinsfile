@@ -25,6 +25,7 @@ stages {
             steps {
                 echo "Selected AMI: ${params.AMI_ID}"
             }
+    }
 
     stage('Checkout') {
         steps {
