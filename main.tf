@@ -347,10 +347,6 @@ resource "aws_autoscaling_group" "this" {
       propagate_at_launch = true
     }
   }
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 resource "aws_autoscaling_policy" "cpu_target_tracking" {

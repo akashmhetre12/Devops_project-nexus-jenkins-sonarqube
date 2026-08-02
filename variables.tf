@@ -59,11 +59,11 @@ variable "health_check_path" {
 variable "instance_type" {
   description = "EC2 instance type"
   type        = string
-  default     = "t3.medium"
+  default     = "t3.micro"
 }
 
 variable "ami_id" {
-  description = "AMI ID to launch. Point this at your golden/baked AMI once you start creating one post-deploy."
+  description = "AMI ID to launch"
   type        = string
 }
 
