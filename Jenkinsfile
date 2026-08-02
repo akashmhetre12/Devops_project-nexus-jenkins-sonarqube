@@ -58,7 +58,7 @@ stages {
                     sh """sh "terraform apply -auto-approve -var-file=${tfvarsFile} -var=\"ami_id=${params.AMI_ID}\""""
                 else if (params.ACTION == 'destroy') {
                     echo "Running DESTROY for ${params.ENV}"
-                    sh """sh "terraform destroy -auto-approve -var-file=${tfvarsFile} -var=\"ami_id=${params.AMI_ID}\""""
+                    sh """sh "terraform destroy -auto-approve -var-file=${tfvarsFile} -var=\"ami_id=${params.AMI_ID}\"""""
                 }
             }
         }
