@@ -16,3 +16,5 @@ subnets = {
   "private-subnet-1" = { cidr = "10.0.3.0/24", az = "ap-south-1a", is_public = false }
   "private-subnet-2" = { cidr = "10.0.4.0/24", az = "ap-south-1b", is_public = false }
 }
+
+ami_id = ""

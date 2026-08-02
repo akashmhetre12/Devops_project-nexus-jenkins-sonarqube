@@ -118,6 +118,72 @@ module "subnets" {
   tags              = merge(local.common_tags, { SubnetType = each.value.is_public ? "public" : "private" })
 }
 
+# ---------------------------------------------------------------------------
+# Security Groups
+# ---------------------------------------------------------------------------
+
+resource "aws_security_group" "alb" {
+  name        = "${local.name_prefix}-alb-sg"
+  description = "Allow inbound HTTP/HTTPS to ALB"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(local.common_tags, { Name = "${local.name_prefix}-alb-sg" })
+}
+
+resource "aws_security_group" "instance" {
+  name        = "${local.name_prefix}-instance-sg"
+  description = "Allow traffic from ALB and SSH from allowed range"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    description     = "App traffic from ALB"
+    from_port       = var.instance_port
+    to_port         = var.instance_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  ingress {
+    description = "SSH for deployment"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["223.233.81.138/32"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(local.common_tags, { Name = "${local.name_prefix}-instance-sg" })
+}
+
 # ── EC2 Instances (2 instances via for_each) ─────────────────────────
 resource "aws_instance" "nexus-server" {   # we are creating a new instance for jenkins-server
     ami = "ami-006f82a1d5a27da54"
@@ -151,14 +217,151 @@ resource "aws_instance" "sonarqube-server" {   # we are creating a new instance 
     }
 }
 
-/*
-# ── S3 Bucket ─────────────────────────────────────────────────────────
-module "s3_bucket" {
-  source = "git::https://github.com/ygminds73/terraform-module-s3.git"
+# ---------------------------------------------------------------------------
+# Application Load Balancer
+# ---------------------------------------------------------------------------
 
-  bucket_name = "${local.name_prefix}-${var.bucket_suffix}"
-  environment = var.environment
-  tags        = merge(local.common_tags, { Purpose = "storage" })
+resource "aws_lb" "this" {
+  name               = "${local.name_prefix}-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb.id]
+  subnets            = [module.subnets["public-subnet-1"].subnet_id, module.subnets["public-subnet-2"].subnet_id]
+
+  tags = merge(local.common_tags, { Name = "${local.name_prefix}-alb" })
 }
 
-*/
+resource "aws_lb_target_group" "this" {
+  name     = "${local.name_prefix}-tg"
+  port     = var.instance_port
+  protocol = "HTTP"
+  vpc_id   = module.vpc.vpc_id
+
+  health_check {
+    path                = var.health_check_path
+    protocol            = "HTTP"
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    timeout             = 5
+    interval            = 30
+    matcher             = "200-299"
+  }
+
+  # Important for rolling deploys: allow in-flight requests to finish
+  deregistration_delay = 30
+
+  tags = local.common_tags
+}
+
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.this.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.this.arn
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Launch Template
+# ---------------------------------------------------------------------------
+# NOTE ON YOUR SSH-DEPLOY -> AMI WORKFLOW:
+# Initially point ami_id at a base AMI (e.g. Amazon Linux/RHEL) with only
+# the runtime (Java) baked in. Deploy your JAR/WAR over SSH to a running
+# instance, validate it, then create a new AMI from that instance
+# (aws_ami_from_instance, or `aws ec2 create-image` in your Jenkins stage).
+# Feed the new AMI ID back into this launch template (var.ami_id) and run
+# `terraform apply` to trigger an Instance Refresh, which cycles the ASG
+# onto the new golden image with zero manual instance handling.
+
+resource "aws_launch_template" "this" {
+  name_prefix   = "${local.name_prefix}-lt-"
+  image_id      = var.ami_id
+  instance_type = var.instance_type
+  key_name      = "Mumbai"
+
+  vpc_security_group_ids = [aws_security_group.instance.id]
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size           = 20
+      volume_type            = "gp3"
+      delete_on_termination = true
+      encrypted              = true
+    }
+  }
+
+  metadata_options {
+    http_tokens   = "required" # enforce IMDSv2
+    http_endpoint = "enabled"
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+    tags          = merge(local.common_tags, { Name = "${local.name_prefix}-instance" })
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Auto Scaling Group
+# ---------------------------------------------------------------------------
+
+resource "aws_autoscaling_group" "this" {
+  name                = "${local.name_prefix}-asg"
+  vpc_zone_identifier = [module.subnets["private-subnet-1"].subnet_id, module.subnets["private-subnet-2"].subnet_id]
+  target_group_arns   = [aws_lb_target_group.this.arn]
+  health_check_type   = "ELB"
+  health_check_grace_period = 120
+
+  min_size         = var.min_size
+  max_size         = var.max_size
+  desired_capacity = var.desired_capacity
+
+  launch_template {
+    id      = aws_launch_template.this.id
+    version = "$Latest"
+  }
+
+  # Rolling replacement whenever the launch template (i.e. AMI) changes
+  instance_refresh {
+    strategy = "Rolling"
+    preferences {
+      min_healthy_percentage = 90
+      instance_warmup        = 90
+    }
+    triggers = ["launch_template"]
+  }
+
+  dynamic "tag" {
+    for_each = local.common_tags
+    content {
+      key                 = tag.key
+      value               = tag.value
+      propagate_at_launch = true
+    }
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_autoscaling_policy" "cpu_target_tracking" {
+  name                   = "${local.name_prefix}-cpu-tracking"
+  autoscaling_group_name = aws_autoscaling_group.this.name
+  policy_type            = "TargetTrackingScaling"
+
+  target_tracking_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ASGAverageCPUUtilization"
+    }
+    target_value = 60.0
+  }
+}

@@ -44,3 +44,54 @@ variable "tags" {
   default     = {}
 }
 
+variable "instance_port" {
+  description = "Port the application listens on inside the instance"
+  type        = number
+  default     = 8080
+}
+
+variable "health_check_path" {
+  description = "Path the ALB target group uses for health checks"
+  type        = string
+  default     = "/health"
+}
+
+variable "instance_type" {
+  description = "EC2 instance type"
+  type        = string
+  default     = "t3.medium"
+}
+
+variable "ami_id" {
+  description = "AMI ID to launch. Point this at your golden/baked AMI once you start creating one post-deploy."
+  type        = string
+}
+
+variable "key_name" {
+  description = "EC2 key pair name for SSH access"
+  type        = string
+}
+
+variable "min_size" {
+  description = "Minimum number of instances in ASG"
+  type        = number
+  default     = 1
+}
+
+variable "max_size" {
+  description = "Maximum number of instances in ASG"
+  type        = number
+  default     = 4
+}
+
+variable "desired_capacity" {
+  description = "Desired number of instances in ASG"
+  type        = number
+  default     = 2
+}
+
+variable "instance_port" {
+  description = "Port the application listens on inside the instance"
+  type        = number
+  default     = 8080
+}

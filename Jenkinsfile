@@ -21,6 +21,11 @@ parameters {
 
 stages {
 
+    stage('Show Selected AMI') {
+            steps {
+                echo "Selected AMI: ${params.AMI_ID}"
+            }
+
     stage('Checkout') {
         steps {
             checkout scmGit(
@@ -46,19 +51,19 @@ stages {
 
                 if (params.ACTION == 'plan') {
                     echo "Running PLAN for ${params.ENV}"
-                    sh "terraform plan -var-file=${tfvarsFile}"
+                    sh "sh "terraform plan -var-file=${tfvarsFile} -var=\"ami_id=${params.AMI_ID}\"""
                 } 
                 else if (params.ACTION == 'apply') {
                     echo "Running APPLY for ${params.ENV}"
-                    sh "terraform apply -auto-approve -var-file=${tfvarsFile}"
+                    sh "sh "terraform apply -auto-approve -var-file=${tfvarsFile} -var=\"ami_id=${params.AMI_ID}\"""
                 } 
                 else if (params.ACTION == 'destroy') {
                     echo "Running DESTROY for ${params.ENV}"
-                    sh "terraform destroy -auto-approve -var-file=${tfvarsFile}"
+                    sh "sh "terraform destroy -auto-approve -var-file=${tfvarsFile} -var=\"ami_id=${params.AMI_ID}\"""
                 }
             }
         }
-    }
+    }   
 }
 
 }
