@@ -233,7 +233,7 @@ resource "aws_lb" "this" {
 
 resource "aws_lb_target_group" "this" {
   name     = "${local.name_prefix}-tg"
-  port     = var.instance_port
+  port     = var.instance_port-alb
   protocol = "HTTP"
   vpc_id   = module.vpc.vpc_id
 

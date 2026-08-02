@@ -90,7 +90,7 @@ variable "desired_capacity" {
   default     = 2
 }
 
-variable "instance_port" {
+variable "instance_port-alb" {
   description = "Port the application listens on inside the instance"
   type        = number
   default     = 8080

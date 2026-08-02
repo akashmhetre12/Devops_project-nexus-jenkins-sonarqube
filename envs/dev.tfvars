@@ -17,4 +17,4 @@ subnets = {
   "private-subnet-2" = { cidr = "10.0.4.0/24", az = "ap-south-1b", is_public = false }
 }
 
-ami_id = ""
+key_name = "Mumbai"
