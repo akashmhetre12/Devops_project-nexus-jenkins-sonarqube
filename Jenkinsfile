@@ -45,24 +45,28 @@ stages {
     }
 
     stage('Terraform Action') {
-        steps {
-            script {
-                def tfvarsFile = "envs/${params.ENV}.tfvars"
+    steps {
+        script {
+            def tfvarsFile = "envs/${params.ENV}.tfvars"
 
-                if (params.ACTION == 'plan') {
-                    echo "Running PLAN for ${params.ENV}"
-                    sh """sh "terraform plan -var-file=${tfvarsFile} -var=\"ami_id=${params.AMI_ID}\""""
-                } 
-                else if (params.ACTION == 'apply') {
-                    echo "Running APPLY for ${params.ENV}"
-                    sh """sh "terraform apply -auto-approve -var-file=${tfvarsFile} -var=\"ami_id=${params.AMI_ID}\""""
-                else if (params.ACTION == 'destroy') {
-                    echo "Running DESTROY for ${params.ENV}"
-                    sh """sh "terraform destroy -auto-approve -var-file=${tfvarsFile} -var=\"ami_id=${params.AMI_ID}\"""""
-                }
+            if (params.ACTION == 'plan') {
+                echo "Running PLAN for ${params.ENV}"
+                sh """terraform plan -var-file=${tfvarsFile} -var="ami_id=${params.AMI_ID}" """
+            }
+            else if (params.ACTION == 'apply') {
+                echo "Running APPLY for ${params.ENV}"
+                sh """terraform apply -auto-approve -var-file=${tfvarsFile} -var="ami_id=${params.AMI_ID}" """
+            }
+            else if (params.ACTION == 'destroy') {
+                echo "Running DESTROY for ${params.ENV}"
+                sh """terraform destroy -auto-approve -var-file=${tfvarsFile} -var="ami_id=${params.AMI_ID}" """
+            }
+            else {
+                error "Unknown ACTION: ${params.ACTION}. Expected plan, apply, or destroy."
             }
         }
-    }   
+    }
+}   
 }
 
 }
