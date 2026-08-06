@@ -28,7 +28,6 @@ docker run -d \
   --restart unless-stopped \
   -p 8081:8081 \
   -v nexus-data:/nexus-data \
-  --memory="2g" \
   sonatype/nexus3
 
 echo "==> Waiting for Nexus to initialize (this can take 60-90s)..."
