@@ -65,7 +65,7 @@ variable "instance_type" {
 variable "ami_id" {
   description = "AMI ID to launch"
   type        = string
-  default     = "ami-0ae1a64593f9b9bbe" # Amazon Linux 2 AMI (HVM), SSD Volume Type
+  default     = "ami-0f7231ab01560de86" # Amazon Linux 2 AMI (HVM), SSD Volume Type
 }
 
 variable "key_name" {
