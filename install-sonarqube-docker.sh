@@ -57,3 +57,30 @@ echo "NOTE: Community Edition has no built-in DB - it uses embedded"
 echo "H2 by default, but for production point it to PostgreSQL via"
 echo "SONAR_JDBC_URL / SONAR_JDBC_USERNAME / SONAR_JDBC_PASSWORD env vars."
 echo "============================================================"
+
+#creating nexus server with docekr container on same host port 8081
+echo "==> Creating persistent volume for Nexus data..."
+docker volume create nexus-data
+
+echo "==> Running Nexus container..."
+docker run -d \
+  --name nexus \
+  --restart unless-stopped \
+  -p 8081:8081 \
+  -v nexus-data:/nexus-data \
+  sonatype/nexus3
+
+echo "==> Waiting for Nexus to initialize (this can take 60-90s)..."
+sleep 60
+
+echo "==> Fetching initial admin password..."
+docker exec nexus cat /nexus-data/admin.password 2>/dev/null || \
+  echo "Password file not ready yet - run: docker exec nexus cat /nexus-data/admin.password"
+
+echo ""
+echo "============================================================"
+echo "Nexus is starting at: http://<server-ip>:8081"
+echo "Default username: admin"
+echo "Initial password: see above (or /nexus-data/admin.password inside container)"
+echo "IMPORTANT: Open port 8081 in your Security Group / firewall."
+echo "============================================================"
