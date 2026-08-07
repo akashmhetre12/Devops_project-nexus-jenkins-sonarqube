@@ -184,7 +184,8 @@ resource "aws_security_group" "instance" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-instance-sg" })
 }
 
-# ── EC2 Instances (2 instances via for_each) ─────────────────────────
+# ── EC2 Instances (Sonarqube and Nexus deployed over same host with diff container and port) ─────────────────────────
+/*
 resource "aws_instance" "nexus-server" {   # we are creating a new instance for jenkins-server
     ami = "ami-006f82a1d5a27da54"
     # we are using the latest ami that we fetched earlier
@@ -200,6 +201,7 @@ resource "aws_instance" "nexus-server" {   # we are creating a new instance for 
         Name = "nexus-server"  # this will provide name to instance 
     }
 }
+*/
 
 resource "aws_instance" "sonarqube-server" {   # we are creating a new instance for jenkins-server
     ami = "ami-006f82a1d5a27da54"
