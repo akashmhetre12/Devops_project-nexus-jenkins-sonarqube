@@ -204,7 +204,7 @@ resource "aws_instance" "nexus-server" {   # we are creating a new instance for 
 resource "aws_instance" "sonarqube-server" {   # we are creating a new instance for jenkins-server
     ami = "ami-006f82a1d5a27da54"
     # we are using the latest ami that we fetched earlier
-    instance_type = "c7i-flex.large"     # This is the type of the instance we are creating
+    instance_type = "m7i-flex.large"     # This is the type of the instance we are creating
     subnet_id     = module.subnets["public-subnet-2"].subnet_id   # this is the id of the subnet we are using to launch the instance
     user_data = file("./install-sonarqube-docker.sh")  # this is the script that will be executed during the creation of the instance
     key_name = "Mumbai" # this is the key name that we have created in console
