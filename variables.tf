@@ -94,5 +94,5 @@ variable "desired_capacity" {
 variable "instance_port-alb" {
   description = "Port the application listens on inside the instance"
   type        = number
-  default     = 8080
+  default     = 8081
 }
